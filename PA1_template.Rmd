@@ -95,6 +95,7 @@ ggplot(stepsPerDay, aes(stepsPerDay)) +
 
 ## Are there differences in activity patterns between weekdays and weekends?
 
+Add new column to new data set to indicate weekdays and weekends, then calculate the mean grouped by both interval and weekday, then plot it.
 ```{r, message=FALSE}
 dfNew <- mutate(dfNew, day = factor(weekdays(as.Date(dfNew$date))))
 dfNew <- mutate(dfNew, weekday = factor(ifelse(dfNew$day %in% c("Saturday", "Sunday"), "Weekend", "Weekday")))
