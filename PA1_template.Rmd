@@ -5,21 +5,106 @@ output:
     keep_md: true
 ---
 
-
 ## Loading and preprocessing the data
+### Load library 
+```{r, message=FALSE}
+library(dplyr)
+library(ggplot2)
+library(lubridate)
+library(lattice)
+```
 
+### Load/check data
+```{r, message=FALSE}
+FileName <- 'activity.csv'
+df <- read.table(FileName, sep = ',', header = TRUE, quote = "\"", na.strings = "", stringsAsFactors = FALSE, colClasses = c("numeric", "character","integer"))
+str(df)
 
+dfsub1 <- subset(df, !is.na(df$steps)) # subset of orginal data without missing value
+str(dfsub1)
+```
 
 ## What is mean total number of steps taken per day?
+First, calculate the total number of steps taken per day, after ignore the missing value:
+```{r, message=FALSE}
+stepsPerDay <- summarize(group_by(dfsub1, date), stepsPerDay = sum(steps))
+print(stepsPerDay)
+```
 
+Histogram of the total number of steps taken per day (used default bin size and width):
+```{r, message=FALSE}
+ggplot(stepsPerDay, aes(stepsPerDay)) + 
+        geom_histogram() +
+        labs( x = "Total Steps per day") +
+        labs( y = "Frequency")
+```
 
+The mean and median are:
+```{r, message=FALSE}
+mean(stepsPerDay$stepsPerDay)
 
+median(stepsPerDay$stepsPerDay)
+```
 ## What is the average daily activity pattern?
+calculate the average number of steps taken across all days and then plot in a times series
+```{r, message=FALSE}
+stepsInt <- summarize(group_by(dfsub1, interval), stepsInt = mean(steps))
+print(stepsInt)
+plot(stepsInt$steps ~ stepsInt$interval, type="l", xlab="Interval(5-mins)", ylab="Average Steps across days")
+```
 
-
+find the row of 5-minute interval that contains the maximum number of steps
+```{r, message=FALSE}
+stepsInt[which(stepsInt$steps == max(stepsInt$steps)), ]
+```
 
 ## Imputing missing values
+### Calculate the total number of missing value in the original dataset
+```{r, message=FALSE}
+sum(is.na(df)) 
+```
+### Imputate all the missing values in the dataset, with the mean value in that interval across days
+```{r, message=FALSE}
+dfNew <- df 
+for (i in 1:nrow(dfNew)) {
+    if (is.na(dfNew$steps[i])) {
+        dfNew$steps[i] <- stepsInt$stepsInt[which(dfNew$interval[i] == stepsInt$interval)]
+    }
+}
+sum(is.na(dfNew))
+str(df) # old dataset summary
+str(dfNew) # new dataset summary
+```
 
+### Histogram of total number of steps/day after imputation
+```{r, message=FALSE}
+stepsPerDayNew <- summarize(group_by(dfNew, date), stepsPerDayNew = sum(steps))
+print(stepsPerDayNew)
+ggplot(stepsPerDayNew, aes(stepsPerDayNew)) + 
+        geom_histogram() +
+        labs( x = "Total Steps per day after imputation") +
+        labs( y = "Frequency") +
+        labs(title = "New dataset")
+ggplot(stepsPerDay, aes(stepsPerDay)) + 
+        geom_histogram() +
+        labs( x = "Total Steps per day") +
+        labs( y = "Frequency") +
+        labs(title = "Old dataset")
 
+```
 
 ## Are there differences in activity patterns between weekdays and weekends?
+
+```{r, message=FALSE}
+dfNew <- mutate(dfNew, day = factor(weekdays(as.Date(dfNew$date))))
+dfNew <- mutate(dfNew, weekday = factor(ifelse(dfNew$day %in% c("Saturday", "Sunday"), "Weekend", "Weekday")))
+head(dfNew)
+str(dfNew)
+
+stepsIntWeekday <- summarize(group_by(dfNew, interval, weekday), stepsIntWeekday = mean(steps))
+head(stepsIntWeekday)
+str(stepsIntWeekday)
+
+xyplot(stepsIntWeekday ~ interval | weekday, stepsIntWeekday, type = "l", layout = c(1, 2), xlab="Interval(5-mins)", ylab="Average Steps")
+```
+
